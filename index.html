@@ -1,0 +1,189 @@
+<!DOCTYPE html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Top 10 Ulises Spotify</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            background-color: #1db954;
+            color: white;
+            padding: 20px;
+            width: 100%;
+            text-align: center;
+            margin: 0;
+        }
+        button {
+            background-color: #1db954;
+            color: black;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        button:hover {
+            background-color: #17a44d;
+        }
+        #tracks-list {
+            margin-top: 20px;
+            width: 80%;
+        }
+        .track-item {
+            background-color: white;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            cursor: move;
+            user-select: none;
+        }
+        .track-item.dragging {
+            opacity: 0.5;
+            background-color: #e0e0e0;
+        }
+        .button-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+<h1>Top 10 canciones Favoritas de Ulises en Spotify</h1>
+<div class="button-container">
+    <button onclick="window.location.href='http://localhost:3001/login'">Iniciar sesión con Spotify</button>
+    <button id="load-tracks">Cargar Canciones</button>
+</div>
+
+<div id="player-container">
+    <iframe id="spotify-player" src="" width="300" height="80" frameborder="0" allowtransparency="true" allow="encrypted-media"></iframe>
+</div>
+
+<div class="controls">
+    <button id="play">Reproducir Cola</button>
+    <button id="stop">Detener</button>
+    <button id="next">Siguiente Canción</button>
+</div>
+
+<div id="tracks-list"></div>
+
+<script>
+    // Definir la cola de reproducción
+    let trackQueue = [];
+    let isPlaying = false;
+    const player = document.getElementById('spotify-player');
+//funciones para reproducir las canciones
+    function enqueue(track) {
+        trackQueue.push(track);
+        mostrar();
+    }
+//funcion para quitar las canciones de la cola
+    function dequeue() {
+        if (trackQueue.length === 0 || !isPlaying) {
+            isPlaying = false;
+            alert('No hay más canciones en la cola.');
+            return null;
+        }
+        const currentTrack = trackQueue.shift();
+        player.src = currentTrack.url;
+        console.log(`Reproduciendo: ${currentTrack.name} - ${currentTrack.artist}`);
+        mostrar();
+        return currentTrack;
+    }
+//funcion para mostrar las canciones
+    function mostrar() {
+        document.getElementById('tracks-list').innerHTML = trackQueue.map((track, index) => `
+            <div class="track-item"
+                 draggable="true"
+                 data-index="${index}">
+                <p><strong>${track.name}</strong> - ${track.artist}</p>
+            </div>
+        `).join('');
+
+        // Agregar event listeners para el arrastre
+        const trackItems = document.querySelectorAll('.track-item');
+        trackItems.forEach(item => {
+            item.addEventListener('dragstart', dragStart);
+            item.addEventListener('dragover', dragOver);
+            item.addEventListener('drop', drop);
+            item.addEventListener('dragend', dragEnd);
+        });
+    }
+    //para poder arrastar las canciones y ordenar por prioridad
+    function dragStart(e) {
+        e.target.classList.add('dragging');
+        e.dataTransfer.setData('text/plain', e.target.dataset.index);
+    }
+
+    function dragOver(e) {
+        e.preventDefault();
+    }
+
+    function drop(e) {
+        e.preventDefault();
+        const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+        const toIndex = parseInt(e.target.closest('.track-item').dataset.index);
+
+        if (fromIndex !== toIndex) {
+            const [movedTrack] = trackQueue.splice(fromIndex, 1);
+            trackQueue.splice(toIndex, 0, movedTrack);
+            mostrar();
+        }
+    }
+//funcion para finalizar el arrastre
+    function dragEnd(e) {
+        e.target.classList.remove('dragging');
+    }
+//funcion para cargar las canciones
+    async function fetchTracks() {
+        try {
+            const response = await fetch('http://localhost:3001/top-tracks');
+            if (!response.ok) {
+                throw new Error('Error al obtener las canciones');
+            }
+            const data = await response.json();
+            trackQueue = [];
+            data.tracks.forEach(track => {
+                enqueue({
+                    name: track.name,
+                    artist: track.artist,
+                    url: track.url.replace('spotify.com', 'spotify.com/embed')
+                });
+            });
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('tracks-list').innerHTML = `<p>Error: ${error.message}</p>`;
+        }
+    }
+//funcion para reproducir la cola
+    function playQueue() {
+        if (trackQueue.length === 0) {
+            alert('La cola está vacía. Carga las canciones primero.');
+            return;
+        }
+        if (!isPlaying) {
+            isPlaying = true;
+            dequeue();
+        }
+    }
+//funcion para detener la cola
+    function stopQueue() {
+        isPlaying = false;
+        player.src = "";
+    }
+//eventos para las funciones
+    document.getElementById('load-tracks').addEventListener('click', fetchTracks);
+    document.getElementById('play').addEventListener('click', playQueue);
+    document.getElementById('stop').addEventListener('click', stopQueue);
+    document.getElementById('next').addEventListener('click', dequeue);
+</script>
+</body>
