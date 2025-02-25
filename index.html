@@ -62,6 +62,7 @@
 <div class="button-container">
     <button onclick="window.location.href='http://localhost:3001/login'">Iniciar sesión con Spotify</button>
     <button id="load-tracks">Cargar Canciones</button>
+    <div id="status-message" style="margin-top: 20px; padding: 10px; background-color: #f8f9fa; border-radius: 5px;"></div>
 </div>
 
 <div id="player-container">
@@ -145,12 +146,21 @@
     }
 //funcion para cargar las canciones
     async function fetchTracks() {
+        const statusMessage = document.getElementById('status-message');
+        statusMessage.innerHTML = 'Cargando tus canciones favoritas...';
+
         try {
             const response = await fetch('http://localhost:3001/top-tracks');
             if (!response.ok) {
                 throw new Error('Error al obtener las canciones');
             }
             const data = await response.json();
+
+            if (!data.tracks || data.tracks.length === 0) {
+                statusMessage.innerHTML = 'No se encontraron canciones. Asegúrate de haber iniciado sesión en Spotify.';
+                return;
+            }
+
             trackQueue = [];
             data.tracks.forEach(track => {
                 enqueue({
@@ -159,8 +169,11 @@
                     url: track.url.replace('spotify.com', 'spotify.com/embed')
                 });
             });
+
+            statusMessage.innerHTML = '¡Canciones cargadas con éxito! Puedes arrastrarlas para reordenarlas.';
         } catch (error) {
             console.error('Error:', error);
+            statusMessage.innerHTML = `Error: ${error.message}. Verifica la consola para más detalles.`;
             document.getElementById('tracks-list').innerHTML = `<p>Error: ${error.message}</p>`;
         }
     }

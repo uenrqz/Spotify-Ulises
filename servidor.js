@@ -115,4 +115,5 @@ app.get('/top-tracks', async (req, res) => {
 // Iniciar el servidor
 app.listen(port, () => {
     console.log(`El servidor se está ejecutando en: http://localhost:${port}`);
+    console.log(`Abre tu navegador y ve a: http://localhost:${port}`);
 });
